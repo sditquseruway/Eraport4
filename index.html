@@ -164,7 +164,16 @@
     const INITIAL_MAPEL = [];
     const INITIAL_EKSKUL = [];
     const DIMENSI_P5 = ['Keimanan dan ketaqwaan kepada Tuhan yang Maha Esa', 'Kewargaan', 'Penalaran kritis', 'Kreativitas', 'Kolaborasi', 'Kemandirian', 'Kesehatan', 'Komunikasi'];
-    const INITIAL_KKM = { kkm: 70, batasA: 90, batasB: 80, batasC: 70 };
+    const INITIAL_KKM = { 
+      kkm: 70, batasA: 90, batasB: 80, batasC: 70,
+      // 4 kriteria untuk deskripsi capaian kompetensi pada cetak rapor
+      kriteria: [
+        { min: 0,  max: 69,  label: 'Perlu Bimbingan' },
+        { min: 70, max: 79,  label: 'Cukup' },
+        { min: 80, max: 89,  label: 'Baik' },
+        { min: 90, max: 100, label: 'Sangat Baik' }
+      ]
+    };
 
     const COLOR_THEMES = {
       hijau: { primary: '#0d5c3b', primaryHover: '#064e3b', primaryLight: '#ecfdf5' },
@@ -1185,7 +1194,22 @@
     }
 
     function AdminKKM({ kkmConfig, setKkmConfig, profil, showToast }) {
-      const [localKkm, setLocalKkm] = useState(kkmConfig);
+      const defaultKriteria = [
+        { min: 0,  max: 69,  label: 'Perlu Bimbingan' },
+        { min: 70, max: 79,  label: 'Cukup' },
+        { min: 80, max: 89,  label: 'Baik' },
+        { min: 90, max: 100, label: 'Sangat Baik' }
+      ];
+      const [localKkm, setLocalKkm] = useState({
+        ...kkmConfig,
+        kriteria: (kkmConfig.kriteria && kkmConfig.kriteria.length === 4) ? kkmConfig.kriteria : defaultKriteria
+      });
+
+      const updateKriteria = (idx, field, value) => {
+        const newK = [...localKkm.kriteria];
+        newK[idx] = { ...newK[idx], [field]: field === 'label' ? value : (parseInt(value) || 0) };
+        setLocalKkm({ ...localKkm, kriteria: newK });
+      };
 
       const handleSave = () => {
         setKkmConfig(localKkm);
@@ -1200,7 +1224,7 @@
               <h2 className="font-extrabold text-xl sm:text-2xl text-slate-800">Pengaturan KKM & Predikat</h2>
               <p className="text-slate-500 font-medium text-xs sm:text-sm">Tentukan batas nilai minimal untuk setiap predikat pada rapor.</p>
             </div>
-            <button onClick={handleSave} className="w-full sm:w-auto bg-primary hover:bg-primaryHover text-white px-6 py-3 rounded-xl font-bold shadow-md flex justify-center items-center gap-2">
+            <button onClick={handleSave} className="w-full sm:w-auto bg-primary hover:bg-primaryHover text-white px-6 py-3 rounded-xl font-bold shadow-md flex justify-center items-center gap-2" data-testid="kkm-save-btn">
               <Save /> Simpan
             </button>
           </div>
@@ -1228,6 +1252,38 @@
                   </div>
                </div>
                <p className="text-[10px] sm:text-xs text-slate-500 mt-4 font-medium">* Nilai di bawah rentang C otomatis akan mendapatkan predikat (D) - Perlu Bimbingan.</p>
+            </div>
+
+            {/* RENTANG NILAI = KRITERIA UNTUK DESKRIPSI CAPAIAN KOMPETENSI */}
+            <div className="bg-gradient-to-br from-primary/5 to-emerald-50 p-4 sm:p-6 rounded-2xl border-2 border-primary/20">
+               <h3 className="font-extrabold text-slate-800 mb-1 text-sm sm:text-base flex items-center gap-2">
+                  <i className="fas fa-comment-dots text-primary"></i> Kriteria Deskripsi Capaian Kompetensi
+               </h3>
+               <p className="text-[10px] sm:text-xs text-slate-500 mb-4 font-medium">Kalimat ini akan otomatis muncul pada kolom "Capaian Kompetensi" di hasil cetak rapor sesuai nilai siswa.</p>
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  {localKkm.kriteria.map((k, idx) => {
+                     const colorStyles = [
+                       { border: '#fecaca', accent: '#dc2626', tag: 'bg-red-50 text-red-600' },
+                       { border: '#fde68a', accent: '#d97706', tag: 'bg-amber-50 text-amber-600' },
+                       { border: '#bfdbfe', accent: '#2563eb', tag: 'bg-blue-50 text-blue-600' },
+                       { border: '#a7f3d0', accent: '#059669', tag: 'bg-emerald-50 text-emerald-600' }
+                     ];
+                     const s = colorStyles[idx];
+                     return (
+                       <div key={idx} className="bg-white p-3 sm:p-4 rounded-xl shadow-sm" style={{borderWidth: '2px', borderStyle: 'solid', borderColor: s.border}}>
+                          <div className={`text-[10px] sm:text-xs font-black uppercase mb-2 tracking-wider px-2 py-1 rounded-full inline-block ${s.tag}`}>Kolom {idx+1}</div>
+                          <div className="flex gap-2 mb-2 items-center mt-1">
+                            <input type="number" className="w-16 sm:w-20 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs sm:text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-primary text-center" value={k.min} onChange={e=>updateKriteria(idx, 'min', e.target.value)} placeholder="Min" data-testid={`kriteria-${idx}-min`}/>
+                            <span className="text-slate-400 font-bold text-xs">s/d</span>
+                            <input type="number" className="w-16 sm:w-20 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs sm:text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-primary text-center" value={k.max} onChange={e=>updateKriteria(idx, 'max', e.target.value)} placeholder="Max" data-testid={`kriteria-${idx}-max`}/>
+                            <span className="text-slate-400 font-bold text-xs">=</span>
+                          </div>
+                          <input type="text" className="w-full p-2.5 bg-slate-50 rounded-lg text-xs sm:text-sm font-bold text-slate-800 outline-none focus:ring-2" style={{borderWidth: '1px', borderStyle: 'solid', borderColor: s.border}} value={k.label} onChange={e=>updateKriteria(idx, 'label', e.target.value)} placeholder="Kriteria deskripsi (contoh: Sangat Baik)" data-testid={`kriteria-${idx}-label`}/>
+                       </div>
+                     );
+                  })}
+               </div>
+               <p className="text-[10px] sm:text-xs text-slate-500 mt-4 font-medium italic">💡 Contoh hasil: "Menunjukkan penguasaan yang <b>Sangat Baik</b> dalam [materi]" — kata "Sangat Baik" diambil dari kriteria di atas.</p>
             </div>
           </div>
         </div>
@@ -2432,7 +2488,15 @@
                       <th className="p-1 sm:px-4 sm:py-3 min-w-[100px] leading-tight bg-slate-50 whitespace-nowrap text-center" rowSpan={2}>DESKRIPSI CAPAIAN</th>
                     </tr>
                     <tr>
-                      {currentMateri.map((m, i) => <th key={i} className="p-0.5 sm:px-2 sm:py-2 text-center text-[7px] sm:text-xs font-bold bg-primaryLight/50 border-r border-primary/20 min-w-[50px] whitespace-nowrap" title={m}>M{i+1}</th>)}
+                      {currentMateri.map((m, i) => (
+                        <th key={i} 
+                            className="p-0.5 sm:px-2 sm:py-2 text-center text-[7px] sm:text-xs font-bold bg-primaryLight/50 border-r border-primary/20 min-w-[50px] whitespace-nowrap cursor-pointer hover:bg-primary hover:text-white transition-colors" 
+                            title={`Klik untuk lihat TP: ${m}`} 
+                            onClick={() => alert(`Tujuan Pembelajaran (M${i+1}):\n\n${m || '(Belum diisi - silakan ke menu Input Deskripsi/TP)'}`)}
+                            data-testid={`tp-header-m${i+1}`}>
+                           M{i+1}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -2675,7 +2739,9 @@
          if (row.d2 === 'A' || row.d2 === 'B') good.push(dimensiTarget[1]); else bad.push(dimensiTarget[1]);
          if (row.d3 === 'A' || row.d3 === 'B') good.push(dimensiTarget[2]); else bad.push(dimensiTarget[2]);
 
-         let text = `Ananda ${toProperCase(sName)} telah menyelesaikan ${row.jenis}. `;
+         // Tema kokurikuler dari input guru (diisi per siswa)
+         const tema = row.tema && String(row.tema).trim() !== '' ? String(row.tema).trim() : '(Belum diisi)';
+         let text = `Ananda ${toProperCase(sName)} telah menyelesaikan kegiatan kokurikuler dengan tema "${tema}". `;
          
          if (good.length === 3) {
             text += `Ananda sudah sangat baik dalam mengamalkan ${good.join(', ')}.`;
@@ -2709,6 +2775,7 @@
                      <th className="sticky-col-header p-2 sm:p-4 border-r border-b font-extrabold tracking-wide min-w-[150px] max-w-[200px] leading-tight" rowSpan={2}>NAMA SISWA</th>
                      
                      <th className="p-2 sm:p-4 border-r border-b text-center font-bold tracking-wide min-w-[150px] leading-tight bg-slate-50 whitespace-nowrap" rowSpan={2}>JENIS P5</th>
+                     <th className="p-2 sm:p-4 border-r border-b text-center font-bold tracking-wide min-w-[200px] leading-tight bg-amber-50 text-amber-700 whitespace-nowrap" rowSpan={2}>TEMA KOKURIKULER</th>
                      <th className="p-2 sm:p-3 text-center border-b bg-primaryLight font-extrabold text-primaryHover border-r min-w-[150px] leading-tight whitespace-nowrap" colSpan={3}>PREDIKAT</th>
                      <th className="p-2 sm:p-4 border-b text-center font-bold tracking-wide w-[100px] leading-tight bg-slate-50 whitespace-nowrap" rowSpan={2}>REKAP CAPAIAN</th>
                    </tr>
@@ -2724,7 +2791,7 @@
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                    {students.map((s, i) => {
-                     const row = kokuData[s.id] || { jenis: 'Kokurikuler 7KAIH', d1: 'A', d2: 'A', d3: 'A' };
+                     const row = kokuData[s.id] || { jenis: 'Kokurikuler 7KAIH', tema: '', d1: 'A', d2: 'A', d3: 'A' };
                      const text = generateKokuText(row, s.nama);
                      const isExpanded = expandedRowId === s.id;
 
@@ -2741,6 +2808,9 @@
                                <option>Kokurikuler Lintas Mapel</option><option>Kokurikuler 7KAIH</option><option>Kokurikuler Cara Lain</option>
                              </select>
                            </td>
+                           <td className="p-1 sm:p-3 border-r bg-amber-50/30">
+                             <input type="text" disabled={isAppLocked} className="w-full p-2 sm:p-2.5 border border-amber-200 rounded-xl text-[10px] sm:text-sm font-bold outline-none focus:border-amber-500 bg-white disabled:opacity-50" placeholder="Contoh: Gaya Hidup Berkelanjutan" value={row.tema || ''} onChange={e=>handleUpdate(s.id, 'tema', e.target.value)} data-testid={`koku-tema-${s.id}`} />
+                           </td>
                            <td className="p-1 sm:p-3 text-center border-r bg-primaryLight/20"><select disabled={isAppLocked} value={row.d1} onChange={e=>handleUpdate(s.id, 'd1', e.target.value)} className="w-full p-2 border border-slate-200 rounded text-center font-black text-primaryHover outline-none text-[11px] sm:text-sm disabled:bg-slate-100"><option>A</option><option>B</option><option>C</option></select></td>
                            <td className="p-1 sm:p-3 text-center border-r bg-primaryLight/20"><select disabled={isAppLocked} value={row.d2} onChange={e=>handleUpdate(s.id, 'd2', e.target.value)} className="w-full p-2 border border-slate-200 rounded text-center font-black text-primaryHover outline-none text-[11px] sm:text-sm disabled:bg-slate-100"><option>A</option><option>B</option><option>C</option></select></td>
                            <td className="p-1 sm:p-3 text-center border-r bg-primaryLight/20"><select disabled={isAppLocked} value={row.d3} onChange={e=>handleUpdate(s.id, 'd3', e.target.value)} className="w-full p-2 border border-slate-200 rounded text-center font-black text-primaryHover outline-none text-[11px] sm:text-sm disabled:bg-slate-100"><option>A</option><option>B</option><option>C</option></select></td>
@@ -2754,7 +2824,7 @@
                          
                          {isExpanded && (
                             <tr className="bg-blue-50/50">
-                              <td colSpan="8" className="p-3 border-b border-blue-100 text-xs text-blue-800 italic leading-relaxed whitespace-normal break-words border-r">
+                              <td colSpan="9" className="p-3 border-b border-blue-100 text-xs text-blue-800 italic leading-relaxed whitespace-normal break-words border-r">
                                  <b>Deskripsi P5:</b><br/>{text}
                               </td>
                             </tr>
@@ -2787,17 +2857,16 @@
 
       const htmlPrint = () => {
         const colCount = mapelList.length;
-        // Hitung ukuran font & lebar kolom dinamis berdasar jumlah mapel agar muat di kertas landscape A4
+        // Header VERTIKAL (rotate ke atas) agar nama mapel terbaca jelas walau banyak kolom
         const fontSize = colCount <= 8 ? '11px' : (colCount <= 12 ? '10px' : (colCount <= 16 ? '9px' : '8px'));
         const cellPad = colCount <= 12 ? '4px 3px' : '3px 2px';
-        // Lebar kolom mapel: lebih lebar agar nama mapel bisa wrap 2 baris dengan cantik
-        const mapelColWidth = colCount <= 8 ? '70px' : (colCount <= 12 ? '55px' : (colCount <= 16 ? '45px' : '38px'));
-        const headerFontSize = colCount <= 12 ? '10px' : '9px';
-        const headerLineHeight = '1.15';
-        const headerHeight = '42px'; // cukup untuk 2 baris
+        // Lebar kolom mapel SEMPIT karena teks rotate vertikal (cukup untuk 1 angka per baris)
+        const mapelColWidth = colCount <= 10 ? '32px' : (colCount <= 16 ? '26px' : '22px');
+        const headerFontSize = colCount <= 12 ? '11px' : (colCount <= 18 ? '10px' : '9px');
+        const headerHeight = '120px'; // tinggi untuk teks vertikal, semua nama mapel terlihat
 
-        // Header mapel dengan wrap text 2 baris (tidak diputar/rotate, tampilan rapi)
-        const theadMapel = mapelList.map(m => `<th class="mapel-head" style="min-width: ${mapelColWidth}; max-width: ${mapelColWidth}; width: ${mapelColWidth};">${m}</th>`).join('');
+        // Header mapel ROTATE 90° (writing-mode vertical, teks dari bawah ke atas)
+        const theadMapel = mapelList.map(m => `<th class="mapel-head" style="min-width: ${mapelColWidth}; max-width: ${mapelColWidth}; width: ${mapelColWidth};"><div class="mapel-text">${m}</div></th>`).join('');
         const tbodyRows = legerData.map((s, i) => {
           const mapelCols = mapelList.map(m => `<td style="border: 1px solid black; padding: ${cellPad}; text-align: center; font-weight: bold; font-size: ${fontSize}; min-width: ${mapelColWidth}; max-width: ${mapelColWidth};">${s.scores[m] ? Math.round(s.scores[m]) : '-'}</td>`).join('');
           return `
@@ -2815,34 +2884,42 @@
 
         return `
           <html><head>
-            <title>Leger Kelas</title>
+            <title>Leger Kelas - ${profil.namaSekolah || 'Sekolah'}</title>
             <style>
               * { box-sizing: border-box; }
-              body { font-family: Arial, sans-serif; padding: 10mm; color: black; }
+              body { font-family: Arial, sans-serif; padding: 10mm; color: black; visibility: hidden; }
+              body.ready { visibility: visible; }
               h1 { font-size: 20px; font-weight: 900; text-align: center; text-transform: uppercase; margin: 0 0 4px; color: #0d5c3b; }
               h2 { font-size: 13px; font-weight: bold; text-align: center; text-transform: uppercase; margin: 0 0 16px; }
               table.leger { width: 100%; border-collapse: collapse; table-layout: fixed; }
-              table.leger th { background-color: #0d5c3b !important; color: white !important; -webkit-print-color-adjust: exact; border: 1px solid black; padding: 4px 2px; text-align: center; font-size: ${headerFontSize}; height: ${headerHeight}; line-height: ${headerLineHeight}; vertical-align: middle; }
-              /* Header mapel: wrap maksimal 2 baris dengan ellipsis jika lebih */
+              table.leger th { background-color: #0d5c3b !important; color: white !important; -webkit-print-color-adjust: exact; border: 1px solid black; padding: 4px 2px; text-align: center; font-size: ${headerFontSize}; vertical-align: middle; }
+              /* Header mapel: teks rotate 90° vertikal dari bawah ke atas, semua mapel terlihat penuh */
               table.leger th.mapel-head { 
-                white-space: normal; 
-                word-wrap: break-word; 
-                overflow: hidden; 
-                text-overflow: ellipsis;
-                display: -webkit-box; 
-                -webkit-line-clamp: 2; 
-                -webkit-box-orient: vertical;
-                line-clamp: 2;
+                height: ${headerHeight};
+                padding: 4px 2px;
+                vertical-align: bottom;
+                position: relative;
+              }
+              table.leger th.mapel-head .mapel-text {
+                writing-mode: vertical-rl;
+                transform: rotate(180deg);
+                white-space: nowrap;
+                text-align: left;
+                font-size: ${headerFontSize};
+                font-weight: 700;
+                color: white;
+                margin: 0 auto;
+                padding: 4px 0;
               }
               .ttd { display: flex; justify-content: flex-end; padding-right: 40px; margin-top: 30px; }
               .ttd .box { text-align: center; }
               .ttd .name { font-weight: bold; text-transform: uppercase; text-decoration: underline; }
               @media print { 
-                body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; padding: 0; } 
+                body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; padding: 0; visibility: visible !important; } 
                 @page { size: A4 landscape; margin: 8mm; }
                 table.leger { page-break-inside: auto; }
                 tr { page-break-inside: avoid; page-break-after: auto; }
-                /* Header otomatis ikut tiap halaman */
+                /* Header otomatis ikut tiap halaman saat multi-page */
                 thead { display: table-header-group; }
                 tfoot { display: table-footer-group; }
               }
@@ -2853,13 +2930,13 @@
             <table class="leger">
               <thead>
                 <tr>
-                  <th style="width: 28px;">No</th>
-                  <th style="min-width: 140px; max-width: 160px; text-align: left; padding-left: 6px;">Nama Lengkap</th>
-                  <th style="width: 70px;">NISN</th>
+                  <th style="width: 28px; height: ${headerHeight}; vertical-align: middle;">No</th>
+                  <th style="min-width: 140px; max-width: 160px; text-align: left; padding-left: 6px; height: ${headerHeight}; vertical-align: middle;">Nama Lengkap</th>
+                  <th style="width: 70px; height: ${headerHeight}; vertical-align: middle;">NISN</th>
                   ${theadMapel}
-                  <th style="width: 38px;">JML</th>
-                  <th style="width: 42px;">RATA</th>
-                  <th style="width: 34px;">JUA</th>
+                  <th style="width: 38px; height: ${headerHeight}; vertical-align: middle;">JML</th>
+                  <th style="width: 42px; height: ${headerHeight}; vertical-align: middle;">RATA</th>
+                  <th style="width: 34px; height: ${headerHeight}; vertical-align: middle;">JUA</th>
                 </tr>
               </thead>
               <tbody>${tbodyRows}</tbody>
@@ -2870,7 +2947,16 @@
                  <p class="name">${waliKelasName}</p>
               </div>
             </div>
-            <scr`+`ipt>window.print();</scr`+`ipt>
+            <scr`+`ipt>
+              (function(){
+                function go(){
+                  document.body.classList.add('ready');
+                  setTimeout(function(){ window.print(); }, 200);
+                }
+                if (document.readyState === 'complete') { go(); }
+                else { window.addEventListener('load', go); }
+              })();
+            </scr`+`ipt>
           </body></html>
         `;
       };
@@ -2954,7 +3040,9 @@
          if (row.d2 === 'A' || row.d2 === 'B') good.push(dimensiTarget[1]); else bad.push(dimensiTarget[1]);
          if (row.d3 === 'A' || row.d3 === 'B') good.push(dimensiTarget[2]); else bad.push(dimensiTarget[2]);
 
-         let text = `Ananda ${toProperCase(sName)} telah menyelesaikan ${row.jenis}. `;
+         // Tema kokurikuler dari guru, default jika kosong
+         const tema = row.tema && String(row.tema).trim() !== '' ? String(row.tema).trim() : 'Penguatan Profil Pelajar Pancasila';
+         let text = `Ananda ${toProperCase(sName)} telah menyelesaikan kegiatan kokurikuler dengan tema "${tema}". `;
          
          if (good.length === 3) {
             text += `Ananda sudah sangat baik dalam mengamalkan ${good.join(', ')}.`;
@@ -2982,14 +3070,48 @@
         const waliNIP = currentTeacher && currentTeacher.nip && currentTeacher.nip !== '-' ? currentTeacher.nip : '';
         const kepsekNIP = profil.nip && profil.nip !== '-' ? profil.nip : '';
 
-        const validMapels = mapelList.filter(m => calculateNA(m, s.id, s.rombelSD) !== null);
+        // SOLUSI: Gabungkan mapel dari mapelList master admin DAN dari studentGrades
+        // (untuk menangkap mapel yang ada nilainya tapi tidak terdaftar di master, atau urutan beda)
+        const masterMapels = mapelList || [];
+        const gradeMapels = Object.keys(studentGrades || {}).filter(m => {
+          const scores = (studentGrades[m] || {})[s.id] || {};
+          // Cek apakah ada nilai valid di mapel ini untuk siswa ini
+          return Object.keys(scores).some(k => {
+            const v = scores[k];
+            return v !== undefined && v !== null && v !== '' && !isNaN(v) && Number(v) > 0;
+          });
+        });
+        // Gabungkan dengan menjaga urutan master admin dulu, lalu mapel ekstra dari studentGrades
+        const allMapels = [...masterMapels];
+        gradeMapels.forEach(m => { if(!allMapels.includes(m)) allMapels.push(m); });
+        // Filter hanya yang ada nilainya
+        const validMapels = allMapels.filter(m => calculateNA(m, s.id, s.rombelSD) !== null);
+
+        // Helper: ambil label kriteria dari kkmConfig.kriteria sesuai nilai
+        const getKriteriaLabel = (nilai) => {
+          const defaultKriteria = [
+            { min: 0,  max: 69,  label: 'Perlu Bimbingan' },
+            { min: 70, max: 79,  label: 'Cukup' },
+            { min: 80, max: 89,  label: 'Baik' },
+            { min: 90, max: 100, label: 'Sangat Baik' }
+          ];
+          const kriteria = (kkmConfig && kkmConfig.kriteria && kkmConfig.kriteria.length >= 1) ? kkmConfig.kriteria : defaultKriteria;
+          const n = Number(nilai);
+          // Cari kriteria yang range nya mencakup nilai
+          const found = kriteria.find(k => n >= Number(k.min) && n <= Number(k.max));
+          if (found) return found.label;
+          // Fallback: ambil kriteria tertinggi jika nilai > max, atau terendah jika < min
+          const sorted = [...kriteria].sort((a, b) => Number(a.min) - Number(b.min));
+          if (n < Number(sorted[0].min)) return sorted[0].label;
+          return sorted[sorted.length - 1].label;
+        };
 
         const getKetMapel = (mapel, sId, rombelSD) => {
           const materiKey = `${rombelSD}_${mapel}`;
           const materi = (materiGuru[materiKey] || []).filter(m => m !== '');
           const scores = (studentGrades[mapel] || {})[sId] || {};
           const kkmVal = (kkmConfig && kkmConfig.kkm) ? kkmConfig.kkm : 70;
-          if(materi.length === 0) return `<p style="margin:0; padding-bottom: 4px;">Menunjukkan pemahaman yang sangat baik terhadap materi.</p>`;
+          if(materi.length === 0) return `<p style="margin:0; padding-bottom: 4px;">Menunjukkan pemahaman yang baik terhadap seluruh tujuan pembelajaran.</p>`;
           
           let maxVal = -1, minVal = 101, maxIdx = -1, minIdx = -1;
           materi.forEach((_, idx) => {
@@ -3000,21 +3122,15 @@
               if (nv < minVal) { minVal = nv; minIdx = idx; }
             }
           });
-          if(maxIdx === -1) return `<p style="margin:0; padding-bottom: 4px;">Menunjukkan pemahaman yang sangat baik terhadap materi.</p>`;
+          if(maxIdx === -1) return `<p style="margin:0; padding-bottom: 4px;">Menunjukkan pemahaman yang baik terhadap seluruh tujuan pembelajaran.</p>`;
           
-          let ket = `<p style="margin:0; padding-bottom: 4px;">Menunjukkan penguasaan yang sangat baik dalam ${materi[maxIdx]}</p>`;
-          // Hanya tampilkan "perlu bimbingan" jika nilai terendah < KKM
+          // Kriteria diambil dari KKM Pengaturan Admin (kolom 1-4)
+          const labelMax = getKriteriaLabel(maxVal);
+          let ket = `<p style="margin:0; padding-bottom: 4px;">Menunjukkan ${labelMax} dalam ${materi[maxIdx]}</p>`;
+          // Hanya tampilkan deskripsi nilai rendah jika nilai terendah < KKM
           if (materi.length > 1 && maxIdx !== minIdx && minVal < kkmVal) {
-             const lowPhrases = [
-               "Perlu bimbingan dalam", 
-               "Perlu didampingi pada materi", 
-               "Membutuhkan pendampingan dalam", 
-               "Fokus untuk belajar memperbaiki"
-             ];
-             const charCode = sId.charCodeAt(sId.length - 1) || 0;
-             const pIdx = (charCode + mapel.charCodeAt(0)) % lowPhrases.length;
-             
-             ket += `<p style="margin:0;">${lowPhrases[pIdx]} ${materi[minIdx]}</p>`;
+             const labelMin = getKriteriaLabel(minVal);
+             ket += `<p style="margin:0;">${labelMin} dalam ${materi[minIdx]}</p>`;
           }
           return ket;
         };
@@ -3134,8 +3250,14 @@
         ` : '';
 
         return `
-          <div style="padding: 10mm; font-family: Arial, sans-serif; position: relative; font-size: 14px; min-height: 277mm;" class="print-page-break">
+          <div style="padding: 10mm 10mm 18mm 10mm; font-family: Arial, sans-serif; position: relative; font-size: 14px; min-height: 277mm;" class="print-page-break student-rapor" data-student="${properName}">
             ${watermarkTag}
+
+            <!-- Footer per siswa (nama siswa & halaman): muncul di paling bawah halaman cetak -->
+            <div class="rapor-footer" data-student="${properName}" style="position: absolute; bottom: 4mm; left: 10mm; right: 10mm; font-size: 9px; color: #555; border-top: 1px dashed #ccc; padding-top: 3px; display: flex; justify-content: space-between; z-index: 5;">
+               <span><b>${properName}</b> &mdash; ${s.rombelSD || ''} | NISN: ${s.nisn || '-'}</span>
+               <span>Rapor LHB &mdash; ${profil.namaSekolah || ''}</span>
+            </div>
             
             <div style="display: flex; justify-content: center; align-items: center; padding-bottom: 10px; margin-bottom: 15px; position:relative; z-index:10;">
                <h1 class="text-xl font-extrabold text-center tracking-wide uppercase" style="margin: 0;">LAPORAN HASIL BELAJAR</h1>
@@ -3213,7 +3335,8 @@
                <div class="flex justify-between text-sm mt-6 relative z-10">
                   <div class="text-center w-1/3 flex flex-col items-center">
                     <p style="margin-bottom: 2.2cm;">Mengetahui,<br/>Orang Tua Murid</p>
-                    <p class="border-b border-black w-48 m-0">&nbsp;</p>
+                    <p class="border-b border-black w-48 m-0" style="padding-bottom: 2px;">(...........................................)</p>
+                    <p class="m-0 leading-tight" style="font-size: 11px; margin-top: 2px;">Nama Lengkap &amp; Tanda Tangan</p>
                   </div>
                   
                   <div class="text-center w-1/3 flex flex-col items-center">
@@ -3429,6 +3552,6 @@
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9fa9e21e08313fc8',t:'MTc3ODU5MzczMA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9faa03249c9ce10a',t:'MTc3ODU5NTA4Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
 </html>
